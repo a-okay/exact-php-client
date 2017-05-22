@@ -82,7 +82,7 @@ class Connection
     private $client;
     
     /**
-     * @var function(Connection)
+     * @var callable(Connection)
      */
     private $tokenUpdateCallback;
 
@@ -154,7 +154,8 @@ class Connection
         // Add default json headers to the request
         $headers = array_merge($headers, [
             'Accept' => 'application/json',
-            'Content-Type' => 'application/json'
+            'Content-Type' => 'application/json',
+            'Prefer' => 'return=representation'
         ]);
 
         // If access token is not set or token has expired, acquire new token
@@ -192,7 +193,7 @@ class Connection
             $request = $this->createRequest('GET', $url, null, $params);
             $response = $this->client()->send($request);
 
-            return $this->parseResponse($response);
+            return $this->parseResponse($response, $url != $this->nextUrl);
         } catch (Exception $e) {
             $this->parseExceptionForErrorMessages($e);
         }
@@ -338,10 +339,11 @@ class Connection
 
     /**
      * @param Response $response
+     * @param bool $returnSingleIfPossible
      * @return mixed
      * @throws ApiException
      */
-    private function parseResponse(Response $response)
+    private function parseResponse(Response $response, $returnSingleIfPossible = true)
     {
         try {
 
@@ -360,7 +362,7 @@ class Connection
                 }
 
                 if (array_key_exists('results', $json['d'])) {
-                    if (count($json['d']['results']) == 1) {
+                    if ($returnSingleIfPossible && count($json['d']['results']) == 1) {
                         return $json['d']['results'][0];
                     }
 
@@ -525,7 +527,7 @@ class Connection
     }
     
     /**
-     * @param mixed $callback
+     * @param callable $callback
      */
     public function setTokenUpdateCallback($callback) {
         $this->tokenUpdateCallback = $callback;
